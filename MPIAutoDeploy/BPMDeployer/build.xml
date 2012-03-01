@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This script deploys/undeploy BPM projects/resources to target environment
+	Author : Surendar Patchimalla
+ -->
+
+<project name="BPMDeployerAgent" default="default" basedir="." xmlns:fuego="antlib:fuego.tools.ant.enterprise" xmlns:fuego.j2ee="antlib:fuego.tools.ant.j2ee">
+
+	<taskdef resource="net/sf/antcontrib/antlib.xml" />
+	<target name="init">
+	<tstamp>
+    <format property="timestamp" pattern="yyyy-MM-dd_HH-mm-ss"/>
+	</tstamp>
+	<property name="deploy.log.dir" location="${basedir}/deploylogs"/>
+	<mkdir dir="${deploy.log.dir}"/>
+	<property name="deploy.log.filename" value="BPMAutoDeployAgent_${timestamp}.log"/>
+	<record name="${deploy.log.dir}/${deploy.log.filename}"    loglevel="verbose" append="false"/>
+	<echo message="Build logged to ${deploy.log.filename}"/>
+	<mkdir dir="tmp"/>
+	</target>
+	<target name="bpmremotedeploy" description="Publish and deploy processes" depends="init" >
+	<loadproperties srcfile="bpmdetails.properties" />
+	<loadproperties srcfile="global-environment-bpm.properties" />	
+	<loadproperties srcfile="weblogic-domain.properties" />	
+	<loadproperties srcfile="psc_details.properties" />	
+	<loadproperties srcfile="psc_details.properties" />
+	<propertycopy name="pscDeployable" from="${bpm.project}.deployable"/>
+	<echo message="pscDeployable = ${pscDeployable} "/>	
+	<delete includeemptydirs="true">
+		<fileset dir="tmp" includes="**/*" defaultexcludes="false" />
+	</delete>
+	<if>
+		<equals arg1="${bpm.deploy.mode.major}" arg2="true" />
+			<then> <property name="bpm.deploy.mode" value="new-major" /> </then>
+		<else> <property name="bpm.deploy.mode" value="keep" /> </else>
+	</if>
+	<unzip src="./${pscDeployable}" dest="./tmp" />
+	<echo> Property bpm.deploy.mode = ${bpm.deploy.mode}</echo>
+	<property name="pscname" value="${bpm.project}" />
+	<propertycopy name="processname" from="bpm.${pscname}.processname" />
+	<fuego:passport id="bpm.passport" directoryid="${bpm.dir.id}"  participant="${bpm.admin.user}" password="${bpm.admin.password}" />
+	<fuego:session passportref="bpm.passport" verbose="true" haltonerror="true">
+	<fuego:publish fpr="./tmp/${processname}"
+		     deploy="true"
+		     engine="${bpm.engine}"
+		     mode="${bpm.deploy.mode}"
+			 haltonerror="true"
+		     importdata="true"
+		     automapconfigs="true"
+			 automapbuspars="true"
+		     automapvars="true"
+		     automaproles="true"
+			 notifyengines="false"
+			 abortifincompatible="true"
+		     importcustomviews="true"/>
+	<fuego:configuration action="import"
+			   file="${bpm.engine.externalResource.file}"
+			   haltonerror="true"
+			   force="true"/>
+    </fuego:session>
+    </target>
+	<target name="bpmremoteundeploy" description="undeploy processes" depends="init">
+	<loadproperties srcfile="bpmdetails.properties" />
+	<loadproperties srcfile="global-environment-bpm.properties" />	
+	<loadproperties srcfile="weblogic-domain.properties" />		
+	<fuego:passport id="bpm.passport" directoryid="${bpm.dir.id}"  participant="${bpm.admin.user}" password="${bpm.admin.password}" />
+    <fuego:session passportref="bpm.passport" verbose="true" haltonerror="true">
+		<fuego:undeploy projectName="${bpm.project.name}" haltonerror="true"/>
+		<fuego:unpublish projectName="${bpm.project.name}" haltonerror="true"/>
+    </fuego:session>
+    </target>	
+	<target name="default">
+		<echo>Usage:</echo>
+		<echo>ant taskname ( ie: bpmremotedeploy/bpmremoteundeploy ) </echo>
+		
+	</target>
+
+</project>
+

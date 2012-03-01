@@ -1,0 +1,63 @@
+## comment this out when not messing around
+weblogic.script.debugging=off
+# this should be 0
+weblogic.script.deploy.distribute.count=0
+
+## use the following to switch off versioned deployment
+## comment out to deploy normally
+## new in 2.4.3 to address issue with propagation of workContext
+#weblogic.application.deploy.without.version.identifier=true
+
+domain.datacentre.code=GWA
+## edit these to access the target domain
+## use unix style paths or double backslash seperator
+## Oracle weblogic app server admin
+oradm.domain_name=GWA_Applications
+oradm.admin_user=GWAApplicationsAdmin
+oradm.admin_password=0racl3ap8Adm!n
+oradm.admin_url=t3s://10.240.82.100:9102
+
+##SSL for GWA_Applications Domain
+oradm.keystore.file=./AppsMPITrustList.jks
+oradm.keystore.passphrase=Password123!MP
+
+## define deployment targets - these may be clusters or managed servers
+## each deployment target has a pointer to the domain admin server using the
+## <target-prefix>.admin.server=<admin-server-prefix>
+## property. The <target-prefix> matches that provided by the configuration registry
+
+## GW APP Domain - User Applications Cluster
+gwapp.target.name=GWA_User_Applications
+gwapp.admin.server=oradm
+
+## GW APP Domain - Implementations Cluster
+gwimp.target.name=GWA_Service_Implementations
+gwimp.admin.server=oradm
+
+## GW APP Domain - Singleton Apps MAnaged Server
+singletonapp.target.name=ORAPP20_MS1
+singletonapp.admin.server=oradm
+
+## GW APP Domain - Singleton Implementations Managed Server
+singletonimp.target.name=ORAPP21_MS2
+singletonimp.admin.server=oradm
+
+## GWA_ServiceBus Domain
+osbadm.adminUrl=t3://10.240.82.100:9003
+osbadm.admin_user=GWAServiceBusAdmin
+osbadm.admin_password=0racl30sbAdm!n
+
+osbimp.target.name=GWA_OSB
+osbimp.admin.server=osbadm
+
+##SSL for GWA_ServiceBus Domain - not required here but a copy of the GWA_Applications domain keystore is defined for consistency
+## the scripts define a keystore by default even if not required
+osbimp.keystore.file=./OSBMPITrustList.jks
+osbimp.keystore.passpharase=Password123!MP
+
+## Aide memoire
+## BPM Manual Deployment
+## http://10.240.82.100:8686/webconsole
+## GWABPMAdmin
+## G@teway10
+

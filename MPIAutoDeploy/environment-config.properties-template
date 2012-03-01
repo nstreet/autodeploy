@@ -1,0 +1,55 @@
+# properties to describe the deployment
+# use unix style paths so that this is consumable by WLST/ant
+# either package_zip or manifest properties should be present - not both
+# the path to the zip file
+#package_zip=D:/packages/GWA_00_01_04_00-GENERIC.zip
+# path to the manifest file
+manifest.file=release-manifests/GWA_00_03_00_20.20120207.094016.xml
+# where did the manifest come from (cmdb, ci or csv) - currently only cmdb and ci supported
+manifest.source=cmdb
+# where is the deployment metadata coming from (cr - config registry, cmdb - CMDB) currently only cr is supported
+manifest.metadata.source=cr
+# path to the config registry or cmdb report
+manifest.metadata.file=sample_properties/ConfigRegComponents.xls
+# protocol for repository
+manifest.repository.protocol=file
+# path to root of artefact repository
+manifest.repository.root=D:/Repository
+# the path to the environment-specific configuration file
+config.file.path=D:/packages/config/Slot_PLAT3-01_00_00.properties
+
+# if implemented - the version of the environment-specific configuration file
+config.file.version=Slot_PLAT3-01_00_00
+
+##########################################################################
+# DELETE EVERYTHING BELOW
+# the following are examples and replicate the above
+# DO NOT SAVE THIS FILE AS environment-config.properties WITH THESE EXAMPLES
+##########################################################################
+
+######
+# example of properties for ci manifest (sample_properties/CIDeploys.xml)
+######
+# properties to describe the deployment
+# use unix style paths so that this is consumable by WLST/ant
+# either package_zip or manifest properties should be present - not both
+# the path to the zip file
+#package_zip=D:/packages/GWA_00_01_04_00-GENERIC.zip
+# path to the manifest file
+manifest.file=sample_properties/CIDeploys.xls
+# where did the manifest come from (cmdb or csv) - currently only cmdb and ci supported
+manifest.source=ci
+# where is the deployment metadata coming from (cr - config registry, cmdb - CMDB) currently only cr is supported
+manifest.metadata.source=cr
+# path to the config registry or cmdb report
+manifest.metadata.file=sample_properties/CIDeploys.xls
+# protocol for repository
+manifest.repository.protocol=ftp
+# path to root of artefact repository
+manifest.repository.root=build.gateway.michaelpage.local
+# the path to the environment-specific configuration file
+config.file.path=D:/packages/config/Slot_PLAT3-01_00_00.properties
+
+# if implemented - the version of the environment-specific configuration file
+config.file.version=Slot_PLAT3-01_00_00
+#####

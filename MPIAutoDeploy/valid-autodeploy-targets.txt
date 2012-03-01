@@ -1,0 +1,21 @@
+# VALID ANT TARGETS
+# ..\autodeploy.cmd uses this file to validate argument 1
+# if argument 1 is not one of these entries it will fail and display usage
+# second parameter is whether weblogic domain properties are required. this enables running stuff that does not need to talk to wl
+# third parameter is whether or not a deployment package is required. this is just cosmetic so as to avoid the tedium when we don't need it
+# if it is not specified the default behaviour is to require a package
+# fourth parameter is whether or not the goal is an integrated one - i.e runs more than one target
+gwappdeploy,true
+gwappundeploy,true
+gwappcleanup,true
+osbdeploy,true
+osbundeploy,true
+createdatasources,true
+createjmsresources,true
+dropjmsresources,true
+postdeploymentchecks,true
+bpmdeploy,true
+bpmundeploy,true
+createconfigreplacemap,false,false
+alltests,false,false
+package-prepare,true,false,true

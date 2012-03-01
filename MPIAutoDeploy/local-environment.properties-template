@@ -1,0 +1,19 @@
+## change these to reflect the path (unix style) to your osb and wlserver installs
+## these properties are used in ant
+##
+## path to the osb installation validated by the presence of ${osbimp.install.path}/lib/alsb.jar
+##
+osbimp.install.path=D:/Oracle/bea/osb_10.3
+##
+## path to the weblogic server installation validated by the presence of ${wl.path}/server/bin/setWLSEnv.cmd
+## it is also assumed that the parent of this directory contains modules\com.bea.common.configfwk_1.2.1.0.jar
+## i.e ${wl.home}/../modules/com.bea.common.configfwk_1.2.1.0.jar exists
+wl.home=D:/Oracle/bea/wlserver_10.3
+##
+## for historic purposes we still requiire this directory - should be removed in future versions
+## the root directory of the scripts (the AutoDeploy directory created when this zip is expanded)
+mpi.autodeploy.home=D:/deployment-scripts/MPI_Autodeploy_02_04_01/MPIAutoDeploy
+##
+## the path to the jrockit jre - on a desktop, liable to be in a WL_HOME on a deploy server it will be D:/java/jrmc-3.1.2-1.6.0
+jrockit.home=D:/Oracle/Java/jrmc-3.1.2-1.6.0
+

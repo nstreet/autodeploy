@@ -1,0 +1,527 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Autodeployment Script 
+	Author : Surendar Patchimalla
+	substantially hacked by Neil Street
+	design paradigm:
+		these targets are executed from a batch file and presuppose an environment has been set that will enable WLST to be run
+		ant is used to process pretty much everything and present a bunch of properties to WLST by exporting them as XML
+		(we found that using XML was a more convenient method because we avoid a load of encoding issues)
+		WLST scripts are used to do the work
+ -->
+<project name="MPIAutoDeploy" default="default" basedir="." xmlns:fuego="antlib:fuego.tools.ant.enterprise">
+	<taskdef resource="net/sf/antcontrib/antlib.xml" />
+
+	<target name="set-cr-number" unless="change.request.no">
+		<property name="change.request.no" value="autodeploy"/>
+	</target>
+
+	<target name="init" depends="set-cr-number">
+		<!--
+		fileset and pathconvert create a comma-separated list of files for encryptProperties to process
+		any properties file that may contain a clear-text password should be in the fileset
+		-->
+		<fileset id="propertyfiles" dir="." includes="*.properties"/>
+		<pathconvert dirsep="/" pathsep="," property="property.files" refid="propertyfiles"/>
+		<antcall target="runpyscript">
+			<param name="script" value="encryptProperties"/>
+		</antcall>
+		<delete includeemptydirs="true">
+			<fileset dir="${basedir}" includes="**/.svn" defaultexcludes="false" />
+		</delete> 
+		<tstamp>
+		<format property="timestamp" pattern="yyyy-MM-dd_HH-mm-ss"/>
+		</tstamp>
+		<property environment="env"/>
+		<property name="deploy.log.dir" location="${basedir}/deploylogs"/>
+		<mkdir dir="${deploy.log.dir}"/>
+		<property name="deploy.log.filename" value="${change.request.no}_deployed_${timestamp}.log"/>
+		<record name="${deploy.log.dir}/${deploy.log.filename}"    loglevel="verbose" append="false"/>
+		<echo message="Build logged to ${deploy.log.filename}"/>
+	</target>
+	<target name="loadWeblogicProperties">
+		<loadproperties srcfile="global-environment.properties" />
+		<available property="we-have-local-env" file="local-environment.properties"/>
+		<fail unless="we-have-local-env" status="1">
+			<![CDATA[
+[ERROR]
+[ERROR] the local-environment.properties file must be present
+[ERROR]	this file describes the local software installation
+[ERROR] edit the local-environment.properties-template file and save it as local-environment.properties
+			]]>
+		</fail>
+		<loadproperties srcfile="local-environment.properties" />
+		<available property="we-have-weblogic-env" file="weblogic-domain.properties"/>
+		<fail unless="we-have-weblogic-env" status="1">
+			<![CDATA[
+[ERROR]
+[ERROR] the weblogic.domain.properties file must be present
+[ERROR]	this file describes the weblogic domain into which we are deploying
+[ERROR] edit the weblogic-domain.properties-template file and save it as weblogic-domain.properties
+			]]>
+		</fail>
+		<loadproperties srcfile="weblogic-domain.properties" />
+		<available property="we-have-env-config" file="environment-config.properties"/>
+		<fail unless="we-have-env-config" status="1">
+			<![CDATA[
+[ERROR]
+[ERROR] the environment-config.properties file must be present
+[ERROR]	this file describes the deployment session:
+[ERROR]	* the location of the distribution zip
+[ERROR]	* the location of the environment-specific configuration properties file
+[ERROR]	* the version of the configuration properties file
+[ERROR] edit the environment-config.properties-template file and save it as environment-config.properties
+			]]>
+		</fail>
+		<loadproperties srcfile="environment-config.properties"/>
+		<basename file="${config.file.path}" property="config.file.name"/>
+		<property name="mappeddir_ms1" value="Y:" />
+		<property name="mappeddir_ms2" value="Z:" />
+		<property name="bpmmappeddir" value="X:" />	
+		<echo message="Package Home =   ${package.home}" />
+<!--
+		<exec dir="${wl.home}\server\bin" executable="cmd" failonerror="true">
+			<arg value="/c" />
+			<arg value="setWLSEnv.cmd" />
+			<arg value="-p" />
+	</exec>
+-->
+	</target>
+	<target name="gwappdeploy" depends="init, loadWeblogicProperties, webappslist-checkfile" if="webappslist.present">
+		<touch file = "DEPLOY_STATUS_${timestamp}" />	
+		<echo message="[INFO] checking state of managed servers"/>
+		<echo message="[INFO] all managed servers must be RUNNING"/>
+		<antcall target="runpyscript">
+			<param name="script" value="checkmanagedservers"/>
+		</antcall>
+<!--
+		<foreach list="${psc.list}" delimiter="," param="psc.name" target="rundeployer" inheritall="true" />
+-->
+		<property name="deployApplications.action" value="deploy"/>
+		<antcall target="runpyscript">
+			<param name="script" value="deployApplications"/>
+		</antcall>
+	</target>
+
+	
+	<target name="osbdeploy" depends="init, loadWeblogicProperties, serviceslist-checkfile" if="serviceslist.present">
+		<antcall target="runpyscript">
+			<param name="script" value="importosb"/>
+		</antcall>
+	</target>
+	<target name="createdatasources" depends="init, loadWeblogicProperties, dsdetails-checkfile,loadDSProperties" if="dsdetails.present">
+		<touch file = "DEPLOY_STATUS_${timestamp}" />
+		<echo message="[INFO] processing datasources"/>
+		<antcall target="runpyscript">
+			<param name="script" value="create_datasource"/>
+		</antcall>
+	</target>
+	<target name="loadDSProperties">
+		<loadproperties srcfile="${package.home}/dsdetails.properties" />
+	</target>
+	<target name="createjmsresources" depends="init, loadWeblogicProperties, jmsdetails-checkfile,loadJMSProperties">
+		<echo message="[INFO] processing JMS resources"/>
+		<property name="managejmsresources.action" value="create"/>
+		<antcall target="runpyscript">
+			<param name="script" value="managejmsresources"/>
+		</antcall>
+	</target>
+	<target name="dropjmsresources" depends="init, loadWeblogicProperties, jmsdetails-checkfile,loadJMSProperties">
+		<echo message="[INFO] processing JMS resources"/>
+		<property name="managejmsresources.action" value="drop"/>
+		<antcall target="runpyscript">
+			<param name="script" value="managejmsresources"/>
+		</antcall>
+	</target>
+	<target name="loadJMSProperties">
+		<loadproperties srcfile="${package.home}/jmsdetails.properties" />	
+	</target>
+	<target name="postdeploymentchecks" depends="init, loadWeblogicProperties, endpoints_list-checkfile" if="endpoints_list.present">
+		<echo message="Validating Endpoints ...." />
+		<java classname="com.mpi.intoffice.MPIWSDLValidator" fork="true" failonerror="true" >
+			<classpath>
+			<pathelement path="${java.class.path}"/>
+			  <fileset dir="lib">
+				<include name="**/*.jar"/>
+			</fileset>
+			</classpath>
+			<arg line="${package.home}/endpoints_list.txt"/>
+		</java>	
+	</target>
+	<target name="bpmdeploy" depends="init, loadWeblogicProperties, bpmdetails-checkfile" if="bpmdetails.present">
+		<loadproperties srcfile="${package.home}/bpmdetails.properties" />
+		<loadproperties srcfile="global-environment-bpm.properties" />		
+		<loadproperties srcfile="${package.home}/psc_details.properties" />				
+		<exec executable="cmd.exe">
+            <arg line="/c if not exist ${bpmmappeddir} net use ${bpmmappeddir} \\${bpm.adm.host.name}\D$  /USER:${windows.admin.user} ${windows.admin.password}"/>
+		</exec>
+		<copy todir="${bpmmappeddir}/tools/BPMDeployer">
+			<fileset dir="BPMDeployer"/>
+		</copy>
+		<propertycopy property="pscDeployable" from="${bpm.project}.deployable"/>
+		<echo message="pscDeployable = ${pscDeployable} "/>
+		<copy file="${package.home}\${pscDeployable}" tofile="${bpmmappeddir}/tools/BPMDeployer/${pscDeployable}"/>
+		<copy file="${package.home}/bpmdetails.properties" tofile="${bpmmappeddir}/tools/BPMDeployer/bpmdetails.properties"/>
+		<copy file="${package.home}/${bpm.engine.externalResource.file}" tofile="${bpmmappeddir}/tools/BPMDeployer/${bpm.engine.externalResource.file}"/>
+		<copy file="weblogic-domain.properties" tofile="${bpmmappeddir}/tools/BPMDeployer/weblogic-domain.properties"/>
+		<copy file="global-environment-bpm.properties" tofile="${bpmmappeddir}/tools/BPMDeployer/global-environment-bpm.properties"/>		
+		<copy file="${package.home}/psc_details.properties" tofile="${bpmmappeddir}/tools/BPMDeployer/psc_details.properties"/>
+
+		<exec executable=".\modules\psexec.exe" failonerror="true">
+            <arg line="\\${bpm.adm.host.name} -i -u ${windows.admin.user} -p ${windows.admin.password} -w D:/Tools/BPMDeployer cmd /c deploy.bat"/>
+		</exec>
+		<delete  includeemptydirs="true">
+			<fileset dir="${bpmmappeddir}/tools/BPMDeployer">
+				<exclude name="**/deploylogs/*"/>
+			</fileset>
+		</delete> 
+		<exec executable="cmd.exe">
+			<arg line="/c if exist ${bpmmappeddir} net use ${bpmmappeddir} /delete /YES "/>
+		</exec>
+	</target>
+	<target name="bpmundeploy" depends="init, loadWeblogicProperties, bpmdetails-checkfile" if="bpmdetails.present">
+		<loadproperties srcfile="${package.home}/bpmdetails.properties" />
+		<loadproperties srcfile="global-environment.properties" />	
+		<loadproperties srcfile="${package.home}/psc_details.properties" />			
+		<exec executable="cmd.exe">
+            <arg line="/c if not exist ${bpmmappeddir} net use ${bpmmappeddir} \\${bpm.adm.host.name}\D$  /USER:${windows.admin.user} ${windows.admin.password}"/>
+		</exec>
+		<copy todir="${bpmmappeddir}/tools/BPMDeployer">
+			<fileset dir="BPMDeployer"/>
+		</copy>
+		<propertycopy property="pscDeployable" from="${bpm.project}.deployable"/>		
+		<copy file="${package.home}\${pscDeployable}" tofile="${bpmmappeddir}/tools/BPMDeployer/${pscDeployable}"/>
+		<copy file="${package.home}/bpmdetails.properties" tofile="${bpmmappeddir}/tools/BPMDeployer/bpmdetails.properties"/>
+		<copy file="${package.home}/${bpm.engine.externalResource.file}" tofile="${bpmmappeddir}/tools/BPMDeployer/${bpm.engine.externalResource.file}"/>	
+		<copy file="weblogic-domain.properties" tofile="${bpmmappeddir}/tools/BPMDeployer/weblogic-domain.properties"/>
+		<copy file="global-environment-bpm.properties" tofile="${bpmmappeddir}/tools/BPMDeployer/global-environment-bpm.properties"/>
+		<copy file="${package.home}/psc_details.properties" tofile="${bpmmappeddir}/tools/BPMDeployer/psc_details.properties"/>				
+		<exec executable=".\modules\psexec.exe" failonerror="true">
+            <arg line="\\${bpm.adm.host.name} -i -u ${windows.admin.user} -p ${windows.admin.password} -w D:/Tools/BPMDeployer cmd /c undeploy.bat"/>
+		</exec>
+		<delete  includeemptydirs="true">
+			<fileset dir="${bpmmappeddir}/tools/BPMDeployer">
+				<exclude name="**/deploylogs/*"/>
+			</fileset>
+		</delete> 
+		<exec executable="cmd.exe">
+			<arg line="/c if exist ${bpmmappeddir} net use ${bpmmappeddir} /delete /YES" />
+		</exec> 
+	</target>	
+	
+	
+<!-- 	Checks 							-->
+	
+	<target name="webappslist-checkfile">
+		<available file="${package.home}\psc_details.properties" property="webappslist.present"/>
+		<fail unless="webappslist.present" status="1" message="package root = ${package.home}">
+			<![CDATA[could not locate psc_details.properties in package root
+this file describes the psc's to be deployed. 
+here we are compiling a list of psc's selecting *.web.psc.name]]>
+		</fail>
+		<loadproperties srcfile="${package.home}/psc_details.properties"/>
+		<propertyselector property="psc.list"
+								 delimiter=","
+								 match="([^\.]*)\.pscname"
+								 select="\1"
+								 casesensitive="false" />
+	</target>
+	<target name="serviceslist-checkfile">
+		<available file="${package.home}\psc_details.properties" property="serviceslist.present"/>
+		<fail unless="serviceslist.present" status="1" message="package root = ${package.home}">
+			<![CDATA[could not locate psc_details.properties in package root
+this file describes the psc's to be deployed. 
+here we are compiling a list of psc's selecting *.osb.psc.name]]>
+		</fail>
+	</target>
+	<target name="jmsdetails-checkfile">
+		<available file="${package.home}\jmsdetails.properties" property="jmsdetails.present"/>
+		<if>
+			<not>
+			<isset property="jmsdetails.present" />
+			</not>
+			<then>
+				<echo message="THE PROPERTY FILE jmsdetails.properties NOT FOUND at ${package.home} " />
+			</then>
+		</if>		
+	</target>	
+	<target name="dsdetails-checkfile">
+		<available file="${package.home}\dsdetails.properties" property="dsdetails.present"/>
+		<fail unless="dsdetails.present" status="1" message="package root = ${package.home}">
+			<![CDATA[could not locate dsdetails.properties in package root
+this file describes the datasources to be created. 
+here we are compiling a list of datasources selecting *.db.name]]>
+		</fail>
+		<loadproperties srcfile="${package.home}/dsdetails.properties"/>
+		<propertyselector property="datasource.list"
+								 delimiter=","
+								 match="([^\.]*)\.db.name"
+								 select="\1"
+								 casesensitive="false" />
+	</target>
+	<target name="endpoints_list-checkfile">
+		<available file="${package.home}\endpoints_list.txt" property="endpoints_list.present"/>
+		<if>
+			<not>
+			<isset property="endpoints_list.present" />
+			</not>
+			<then>
+				<echo message="THE PROPERTY FILE endpoints_list.txt NOT FOUND at ${package.home} " />
+			</then>
+		</if>
+	</target>
+	<target name="bpmdetails-checkfile">
+		<available file="${package.home}\bpmdetails.properties" property="bpmdetails.present"/>
+		<if>
+			<not>
+			<isset property="bpmdetails.present" />
+			</not>
+			<then>
+				<echo message="THE PROPERTY FILE bpmdetails.properties NOT FOUND at ${package.home} " />
+			</then>
+		</if>			
+	</target>
+	
+	<!-- 2.4.0 changes -->
+	<target name="checkconfigmap">
+		<loadproperties srcfile="environment-config.properties"/>
+		<basename property="config.file.name" file="${config.file.path}"/>
+		<echo message="[INFO] checking for presence of ${config.file.name}${config.file.version}.properties"/>
+		<available file="${config.file.name}${config.file.version}.properties" filepath="configmaps" type="file" property="config-map-exists"/>
+	</target>
+	<target name="reportpresent" depends="checkconfigmap" if="config-map-exists">
+		<property name="map-present" value=" "/>
+	</target>
+	<target name="reportnotpresent" depends="checkconfigmap" unless="config-map-exists">
+		<property name="map-present" value=" not "/>
+	</target>
+	<target name="reportconfigmap" depends="reportpresent,reportnotpresent">
+		<echo message="map file ${config.file.name}${config.file.version}.properties is${map-present}present"/>
+	</target>
+	<target name="createconfigreplacemap" depends="reportconfigmap" unless="config-map-exists">
+		<mkdir dir="configmaps"/>
+		<property name="script" value="createconfigreplacemap"/>
+		<antcall target="runpyscript"/>
+	</target>
+
+	<target name="alltests">
+		<loadproperties srcfile="sample_properties/psc_details.properties" />
+		<property name="script" value="alltests"/>
+		<antcall target="runpyscript"/>
+	</target>
+
+	<target name="runpyscript" depends="loadWeblogicProperties">
+		<echo message="[INFO] running script ${script}.py"/>
+		<mkdir dir="tmp"/>
+		<delete failonerror="false">
+			<fileset dir="tmp">
+				<include name="ant-*.*"/>
+			</fileset>
+		</delete>
+		<echoproperties destfile="tmp/ant-properties.xml" format="xml"/>
+		<java classname="weblogic.WLST" fork="true" failonerror="true" >
+			<classpath>
+				<pathelement path="${java.class.path}"/>
+				  <fileset dir="lib">
+					<include name="**/*.jar"/>
+				</fileset>
+				<fileset dir="${osbimp.install.path}/lib">
+					<include name="**/*.jar"/>
+				</fileset>
+				<path id="java.class.path">
+					<fileset dir="lib" includes="*.jar" />
+				</path>
+			</classpath>
+			<jvmarg value="-Dpython.path=${basedir}/modules"/>
+			<jvmarg value="-Dweblogic.security.TrustKeyStore=CustomTrust"/>
+			<jvmarg value="-Dweblogic.security.CustomTrustKeyStoreFileName=${oradm.keystore.file}"/>
+			<jvmarg value="-Dweblogic.security.CustomTrustKeystorePassPhrase=${oradm.keystore.passphrase}"/>
+			<jvmarg value="-Dweblogic.security.SSL.ignoreHostnameVerification=true"/>
+			<jvmarg value="-Xms1024m -Xmx1024m"/>
+			<arg line="./modules/${script}.py"/>
+		</java>
+		
+	</target>
+	
+	<target name="prepare-package-for-environment" depends="init, createconfigreplacemap, loadWeblogicProperties">
+		<echo level="info">
+			<![CDATA[
+replacing tokens in:
+${package.home}
+using the token map generated at
+${config.file.name}${config.file.version}.properties
+			]]>
+		</echo>
+		<replace dir="${package.home}" replacefilterfile="configmaps/${config.file.name}${config.file.version}.properties"
+			excludes="**/*.war, **/*.ear, **/*.jar, **/*.class" summary="true"/>
+	</target>
+	<target name="checkpackagedetails" depends="init">
+		<!--
+		we need the location of the package zip and the location of the configuration properties file
+		-->
+		<available property="we-have-env-config" file="environment-config.properties"/>
+		<fail unless="we-have-env-config" status="1">
+			<![CDATA[
+[ERROR]
+[ERROR] the environment-config.properties file must be present
+[ERROR]	this file describes the deployment session:
+[ERROR]	* the location of the distribution zip
+[ERROR]	* the location of the environment-specific configuration properties file
+[ERROR]	* the version of the configuration properties file
+[ERROR] edit the environment-config.properties-template file and save it as environment-config.properties
+			]]>
+		</fail>
+		<loadproperties srcfile="environment-config.properties"/>
+		<!-- we need to have exactly one of
+		package_zip
+		or
+		manifest.file
+		-->
+		<fail unless="config.file.path" status="1">
+			<![CDATA[
+[ERROR] config.file.path paramater must be specified
+		this is specified in the environment-config.properties file and is the path to the data-centre specific properties file
+			]]>
+		</fail>
+		<available file="${config.file.path}" property="we-have-config"/>
+		<fail unless="we-have-config" status="1" message="config.file.path=${config.file.path}">
+			<![CDATA[
+[ERROR] specified config.file.path does not exist
+			]]>
+		</fail>
+	</target>
+	<target name="validate-package-type" depends="is-manifest, is-zip">
+	<!--
+	is-manifest checks whether the package.manifest property is present and whether the manifest file exist
+	is-zip checks whether the package_zip property is set and whether the zip file exists
+	here we check that we have not set none or both
+	if this succeeds, the package-type property will be set to manifest or zip
+	otherwise it should have failed
+	-->
+		<fail unless="package-type" status="1">
+			<![CDATA[
+[ERROR] exactly one of
+	package_zip=
+	package.manifest=
+properties must be present. Check environment-config.properties
+			]]>
+		</fail>
+		<fail status="1">
+			<condition>
+				<and>
+					<isset property="package-manifest-property-present"/>
+					<isset property="package-zip-property-present"/>
+				</and>
+			</condition>
+			<![CDATA[
+[ERROR] exactly one of
+	package_zip=
+	package.manifest=
+properties must be present. Both are specified. Comment out the one not required. Check environment-config.properties
+			]]>
+		</fail>
+		<echo message="[INFO] package type is ${package-type}"/>
+	</target>
+	<target name="is-manifest" if="manifest.file">
+		<echo message="[INFO] manifest.file is set to ${manifest.file}"/>	
+		<available file="${manifest.file}" property="we-have-a-manifest"/>
+		<fail unless="we-have-a-manifest" status="1" message="package.manifest=${manifest.file}">
+			<![CDATA[
+[ERROR] specified config.file.path does not exist
+			]]>
+		</fail>
+		<property name="package-manifest-property-present" value="true"/>
+		<echo message="[DEBUG] package-manifest-property-present=${package-manifest-property-present}"/>
+		<property name="package-type" value="manifest"/>
+	</target>
+	<target name="is-zip" if="package_zip">
+		<echo message="[INFO] package_zip is set to ${package_zip}"/>	
+		<available file="${package_zip}" property="we-have-a-package"/>
+		<fail unless="we-have-a-package" status="1" message="package-zip=${package_zip}">
+			<![CDATA[
+[ERROR] specified package-zip does not exist
+			]]>
+		</fail>
+		<property name="package-zip-property-present" value="true"/>
+		<property name="package-type" value="zip"/>
+	</target>
+	
+	<target name="create-temp-package" depends="checkpackagedetails, validate-package-type, process-package-zip, process-manifest">
+		<echo message="[INFO] temporary environment-specific created at ${package.home}"/>
+	</target>
+
+	<target name="process-manifest" if="package-manifest-property-present" depends="checkpackagedetails">
+		<echo message="[INFO] processing manifest ${manifest.file}"/>
+		<delete file="antBuildtmpFS.xml" failonerror="false"/>
+		<property name="script" value = "deployFSfromCMDBManifest"/>
+		<antcall target="runpyscript"/>
+		<ant antfile="antBuildtmpFS.xml"/>
+		<loadproperties srcfile="environment-config.properties"/>
+		<echo message="package.home = ${package.home}"/>
+	</target>
+	
+	<target name="process-package-zip" if="package-zip-property-present" depends="checkpackagedetails">
+		<!--
+		delete the tmp directory and then unzip the package into it.
+		the package zip has a top level directory that is the release identifier
+		here we parse the contents of the tmp directory to get the toplevel directory
+		and create the command file to set the PACKAGE_HOME environment variable
+		-->
+		<echo message="[DEBUG] package-manifest-property-present=${package-manifest-property-present}"/>
+		<echo message="[INFO] emptying tmp directory"/>
+		<delete dir="tmp"/>
+		<mkdir dir="tmp"/>
+		<echo message="[INFO] processing zip package ${package_zip}"/>
+		<unzip src="${package_zip}" dest="tmp"/>
+		<property name="envprop" value="PACKAGE_HOME"/>
+		<foreach target="setenvprop" param="envprop-value" inheritall="true">
+			<path id="tmpdir">
+				<dirset dir=".">
+					<include name="tmp/*"/>
+				</dirset>
+			</path>
+		</foreach>
+		<property name="configprop" value="package.home"/>
+		<foreach target="updateconfigprop" param="configprop-value" inheritall="true">
+			<path id="tmpdir">
+				<dirset dir=".">
+					<include name="tmp/*"/>
+				</dirset>
+			</path>
+		</foreach>
+		<loadproperties srcfile="environment-config.properties"/>
+	</target>
+	<target name="setenvprop">
+		<echo message="[INFO] creating cmd file set${envprop}.cmd to set ${envprop}=${envprop-value}"/>
+		<echo file="set${envprop}.cmd">
+@echo off
+echo setting environment variable ${envprop}=${envprop-value}
+set ${envprop}=${envprop-value}
+		</echo>
+	</target>
+
+	<target name="updateconfigprop">
+		<echo message="[INFO] updating environment-config.properties"/>
+		<echo message="[INFO] with ${configprop}=${configprop-value}"/>
+		<propertyfile file="environment-config.properties" comment="THIS FILE HAS BEEN EDITED TO ADD ${configprop}=${configprop-value}">
+			<entry key="${configprop}" value="${configprop-value}"/>
+		</propertyfile>
+	
+	</target>
+
+	<target name="default">
+		<echo>Usage:</echo>
+		<echo>ant taskname ( ie: gwappdeploy/gwappundeploy/gwappcleanup/osbdeploy/osbundeploy/createdatasources/createjmsresources/postdeploymentchecks/bpmundeploy/bpmdeploy ) </echo>
+	</target>
+	
+	<!-- POC Tests -->
+	<target name="scripttest">
+		<script language="jython" src="./modules/svnlogs.py"/>
+	</target>
+
+	<target name="testpy" depends="loadWeblogicProperties">
+		<property name="script" value="svnlogs"/>
+		<antcall target="runpyscript"/>
+	</target>
+	
+</project>
+

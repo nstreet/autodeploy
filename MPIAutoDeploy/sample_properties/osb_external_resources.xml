@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?fuego version="6.5.1" build="100118"?>
+<set>
+<configuration name="OSBServerConfiguration" type="SERVER" subtype="SERVER">
+  <property name="url" value="http://GWA-SR-OROSB-20:8081"/>
+  <property name="timeout" value="60" />
+</configuration>
+<configuration name="OnRampService" type="web service" subtype="WSCONSUMER">
+  <property name="transport.connector" value="OSBServerConfiguration"/>
+  <property name="transport.http.path" value="/enterpriseservice/OnRampSOAPAdapter"/>
+  <property name="binding.type" value="static"/>
+  <property name="exceptionPolicy" value="SYSTEM"/>
+  <property name="uddi.registry" value="OSBServerConfiguration"/>
+  <property name="transport.type" value="HTTP"/>
+  <property name="uddi.secure" value="false"/>
+</configuration>
+<configuration name="OSBRegister" type="alsb" subtype="alsb.deployment">
+  <property name="alsb.endpoint.host" value="GWA-SR-ORBPM-20"/>
+  <property name="alsb.endpoint.port" value="8001"/>
+  <property name="transport.alsb.local" value="false"/>
+  <property name="alsb.transport.type" value="http"/>
+  <property name="alsb.deployment.wsdl" value="wsdl"/>
+  <property name="alsb.deployment.bs" value="business"/>
+  <property name="alsb.deployment.xmlschema" value="schema"/>
+  <property name="alsb.deployment.project" value="ApplicationProcessingService"/>
+  <property name="alsb.management.connector" value="OSB"/>
+</configuration>
+<configuration name="OSB" type="alsb" subtype="alsb.management">
+  <property name="alsb.password" value="G@teway80"/>
+  <property name="alsb.port" value="9003"/>
+  <property name="alsb.user" value="gwaosbdeployer"/>
+  <property name="alsb.host" value="GWA-SR-ORADM-20"/>
+</configuration>
+</set>

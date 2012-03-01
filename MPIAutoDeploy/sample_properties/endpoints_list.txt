@@ -1,0 +1,41 @@
+ http://10.240.19.51:8081/ApplicationExceptionServiceImpl/services/ApplicationExceptionService?wsdl
+ http://10.240.19.51:8081/CVCodingService/services/CodingService?wsdl
+ http://10.240.19.51:8081/CVParsingService/services/CVParsingService?wsdl
+ http://10.240.19.51:8081/CVParsingService/services/CVParsingService?wsdl
+ http://10.240.19.51:8081/DocumentIdentificationService/services/DocumentIdentificationService?wsdl
+ http://10.240.19.51:8081/MatchDocumentService/services/MatchDocumentService?wsdl
+ http://10.240.19.51:8081/EmailSenderServiceImpl/services/EmailSenderService?wsdl
+ http://10.240.19.51:8081/EnterpriseDirectoryLookupServiceImpl/services/edlookupservice?wsdl
+ http://10.240.19.51:8081/ReferenceDataLookupServiceImpl/services/ReferenceDataLookupService?wsdl
+ http://10.240.19.44:8081/WebApp/BOExecServiceV1?wsdl
+ http://10.240.19.44:8081/WebApp/DocServiceV1?wsdl
+ http://10.240.19.44:8081/WebApp/LogonServiceV1?wsdl
+ http://10.240.19.44:8081/WebApp/SearchServiceV1?wsdl
+ http://10.240.19.44:8081/WebApp/BOExecServiceV1?wsdl
+ http://10.240.19.44:8081/WebApp/DocServiceV1?wsdl
+ http://10.240.19.44:8081/WebApp/LogonServiceV1?wsdl
+ http://10.240.19.44:8081/WebApp/SearchServiceV1?wsdl
+ http://10.240.19.51:8081/TemplateManagementServiceImplV1/services/TemplateManagementService?wsdl
+http://10.240.19.53:8081//enterpriseservice/AdaptOffRampService?wsdl
+http://10.240.19.53:8081/MPI_COB/proxy/ApplicationExceptionService?wsdl
+http://10.240.19.53:8081/ApplicationManagementService/proxy/ApplicationManagementService?wsdl
+http://10.240.19.53:8081/enterpriseservice/ApplicationNotificationService?wsdl
+http://10.240.19.53:8081/enterpriseservice/ApplicationProcessingService?wsdl
+http://10.240.19.53:8081/enterpriseservice/ApplicationSubmissionProcessingService?wsdl
+http://10.240.19.53:8081/enterpriseservice/ApplicationSubmissionService?wsdl
+http://10.240.19.53:8081/CandidateManagementService/proxy/CandidateManagementService?wsdl
+http://10.240.19.53:8081/enterpriseservice/CandidateNotificationService?wsdl
+http://10.240.19.53:8081/enterpriseservice/CVProcessingService?wsdl
+http://10.240.19.53:8081/DocumentManagementService/proxy/DocumentManagementService?wsdl
+http://10.240.19.53:8081/enterpriseservice/DocumentProcessingService?wsdl
+http://10.240.19.53:8081enterpriseservice/EmailApplicationSubmissionService?wsdl
+http://10.240.19.53:8081/enterpriseservice/EmailSenderService?wsdl
+http://10.240.19.53:8081/enterpriseservice/GenericOffRampService?wsdl
+http://10.240.19.53:8081/enterpriseservice/JobManagementService?wsdl
+http://10.240.19.53:8081/enterpriseservice/OnRampSOAPAdapter?wsdl
+http://10.240.19.53:8081/enterpriseservice/OnRampSOAPService?wsdl
+http://10.240.19.53:8081/CRMScheduledJobsService/proxy/PSCRMScheduledJobsService?wsdl
+http://10.240.19.53:8081/EnterpriseDirectoryLookupService/proxy/PSEnterpriseDirectoryLookupService?wsdl
+http://10.240.19.53:8081/enterpriseservice/ReferenceDataLookupService?wsdl
+http://10.240.19.53:8081/enterpriseservice/TemplateManagementService?wsdl
+http://10.240.19.53:8081/enterpriseservice/URLLookupService?wsdl
